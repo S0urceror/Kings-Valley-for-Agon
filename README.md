@@ -9,6 +9,9 @@ Use [Sjasm 0.39](https://github.com/Konamiman/Sjasm) or a compatible assembler:
 
     sjasm kvalley.asm kvalley.rom
 
+## Agon tweaks
+
+Compile with MSM=1. This replaces OUT's with RST instructions that take up the same size. Also it's add a header to be able to load it with Agon ElectronOS.
 
 ## Version 1 vs Version 2
 

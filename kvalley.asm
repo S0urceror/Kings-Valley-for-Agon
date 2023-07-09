@@ -26,9 +26,9 @@ VERSION2	equ	1	; Segunda version de la ROM con correccion de fallos
 ; - Se puede picar sobre un muro trampa
 ;
 ; - Corregida la posicion del muro trampa de la piramide 10 de la pantalla de la izquierda, abajo a la izquierda (aparece al coger el cuchillo)
-;   La version original lo tenía en la pantalla de la derecha bajo las escaleras. Pero hacia falta cabar un par de ladrillos del suelo para que apareciese.
+;   La version original lo tenï¿½a en la pantalla de la derecha bajo las escaleras. Pero hacia falta cabar un par de ladrillos del suelo para que apareciese.
 ;
-; - Modificación de la posicion del muro trampa de la pirámide 12, en la pantalla de la derecha, abajo a la derecha (aparece al coger el pico) Se ha movido un tile a la derecha (?)
+; - Modificaciï¿½n de la posicion del muro trampa de la pirï¿½mide 12, en la pantalla de la derecha, abajo a la derecha (aparece al coger el pico) Se ha movido un tile a la derecha (?)
 ;
 ; - Los muros trampa se detienen al chocar contra un objeto. En la version anterior lo borraba (erroneamente decrementaba los decimales X en vez de la coordenada Y)
 ;-------------------------------------------------------------------------------
@@ -104,21 +104,26 @@ RDPSG:		equ	#96
 RDVDP:		equ	#13e
 SNSMAT:		equ	#141	;  Read	keyboard row
 
-H_TIMI:		equ	#fd9a
+H_KEYI:		equ	#fd9a
 
+MSM:		equ 1
 
-
-
+	IF MSM=1
+		; BLOAD header
+		db 0x0fe
+		dw BEGIN, ENDADR, START_BASIC
+	ENDIF
 
 ;-------------------------------------------------------------------------------
 ;
 ; ROM header
 ;
 ;-------------------------------------------------------------------------------
-		SIZE    16 * 1024       ; ROM de 16K
+		;SIZE    16 * 1024       ; ROM de 16K
 
 		org	#4000
-
+BEGIN:
+START_BASIC:
 		dw	4241h
 		dw	startCode
 		dw	0
@@ -275,11 +280,13 @@ writeDataVRAM3:
 
 startCode:
 		di
-		im	1
+		IF MSM=0
+			im	1
+		ENDIF
 		ld	a, 0C3h
-		ld	(H_TIMI), a
+		ld	(H_KEYI), a
 		ld	hl, tickMain
-		ld	(H_TIMI+1), hl	; Pone la rutina de interrupcion que lleva la logica del juego
+		ld	(H_KEYI+1), hl	; Pone la rutina de interrupcion que lleva la logica del juego
 
 		ld	sp, stackTop	; Fija el lugar de la pila
 		ld	hl, GameStatus
@@ -306,7 +313,9 @@ dummyLoop:
 ;----------------------------------------------------
 
 VRAM_writeAC:
-		ld	(copyProtect_+1), de ; Proteccion anticopia (!?)
+		IF MSM=0
+			ld	(copyProtect_+1), de ; Proteccion anticopia (!?)
+		ENDIF
 		jp	setFillVRAM
 
 ;-------------------------------------------------------------------------------
@@ -324,7 +333,7 @@ runGame:
 		bit	6, a		; Se esta jugando?
 		jr	nz, runGame2	; Si, no esta en modo demo o en	el menu
 
-		ld	hl, chkPushAnyKey ; Se añade esta funcion para comprobar si se pulsa una tecla y hay que empezar una partida
+		ld	hl, chkPushAnyKey ; Se aï¿½ade esta funcion para comprobar si se pulsa una tecla y hay que empezar una partida
 		push	hl
 
 runGame2:
@@ -1261,7 +1270,12 @@ fillVRAM:
 VRAM_write2:
 		ex	af, af'
 		exx
-		out	(c), a
+		IF MSM=0
+			out	(c), a
+		ELSE
+			RST 28h ; MSM
+			DB 0ffh
+		ENDIF
 		exx
 		ex	af, af'
 		dec	bc
@@ -1304,7 +1318,12 @@ DEtoVRAMset:
 DEtoVRAM:
 		ld	a, (de)
 		exx
-		out	(c), a
+		IF MSM=0
+			out	(c), a
+		ELSE
+			RST 28h ; MSM
+			DB 0ffh
+		ENDIF
 		exx
 		inc	de
 		dec	bc
@@ -1571,7 +1590,7 @@ initHardware:
 		ld	a, 20h		; Silencio
 		call	setMusic
 
-		ld	de, 0		; (!?) No tendría que ser HL? Aunque la proteccion anticopia use DE, la rutina "setFillVRAM" usa HL
+		ld	de, 0		; (!?) No tendrï¿½a que ser HL? Aunque la proteccion anticopia use DE, la rutina "setFillVRAM" usa HL
 		ld	bc, 4000h
 		xor	a
 		call	VRAM_writeAC
@@ -1909,7 +1928,7 @@ loadKonamiLogo:
 		call	UnpackPatterns
 
 		ld	hl, 300h	; Direccion de los atributos de	color del logo
-		ld	bc, 0D8h	; Tamaño
+		ld	bc, 0D8h	; Tamaï¿½o
 		ld	a, 0F0h		; Blanco
 		jp	fillVRAM3Bank	; Colorea el logo
 
@@ -2657,15 +2676,15 @@ setLanzaKnife:
 chkPuertaMov:		
 		push	hl
 		ld	a,04
-		call	getExitDat	; Obtiene puntero al estatus de la puerta que se está procesando
+		call	getExitDat	; Obtiene puntero al estatus de la puerta que se estï¿½ procesando
 		and	#F0		; Se queda con el status (nibble alto)
 		cp	#30		; Se esta abriendo?
 		pop	hl
 		ret	z		; Impide lanzar el cuchillo mientras la puerta se abre para impedir que se corrompan los tiles al pasar el cuchillo sobre la puerta
 		inc	(hl)
-		ld	a,04		; Numero máximo de cuchillos
+		ld	a,04		; Numero mï¿½ximo de cuchillos
 		cp	(hl)
-		jr	nz,chkPuertaMov ; Aún quedan cuchillos por comprobar
+		jr	nz,chkPuertaMov ; Aï¿½n quedan cuchillos por comprobar
 	ENDIF
 
 		xor	a
@@ -3511,7 +3530,7 @@ chkCogeEsc3:
 		cp	b		; Es una escalera?
 		jr	z, chkSubeEsc2	; si
 
-; Comprueba si hay un cuchillo sobre el	primer peldaño de la escalera
+; Comprueba si hay un cuchillo sobre el	primer peldaï¿½o de la escalera
 
 		push	af
 		ld	a, b
@@ -3556,8 +3575,8 @@ chkSubeEsc3:
 		ret
 
 ;----------------------------------------------------
-; Tabla	con las	distancias al primer peldaño dependiendo
-; de la	posicion del personaje respecto	al tile	del peldaño
+; Tabla	con las	distancias al primer peldaï¿½o dependiendo
+; de la	posicion del personaje respecto	al tile	del peldaï¿½o
 ;
 ;----------------------------------------------------
 distPeldano:	db 0
@@ -3905,7 +3924,7 @@ AI_Cuchillos2:
 
 ;----------------------------------------------------
 ; Knife	Status 0: Comprueba el tile que	tiene de fondo y lo guarda
-; Si esta sobre	un peldaño de escalera lo cambia por un	tile de	cuchillo especial que indica que hay escalera detras
+; Si esta sobre	un peldaï¿½o de escalera lo cambia por un	tile de	cuchillo especial que indica que hay escalera detras
 ; Pasa al siguiente estado (1)
 ;----------------------------------------------------
 
@@ -3929,29 +3948,29 @@ initCuchillo:
 initCuchillo2:
 		ld	a, b
 	IF	(VERSION2)
-		sub	#31		; Cuchillo sobre peldaño?
-		cp	2		; Dos posibles direcciones de las escaleras (cuchillo sobre peldaño hacia la derecha y sobre peldaño a la izquierda)
+		sub	#31		; Cuchillo sobre peldaï¿½o?
+		cp	2		; Dos posibles direcciones de las escaleras (cuchillo sobre peldaï¿½o hacia la derecha y sobre peldaï¿½o a la izquierda)
 		ld	a,b
 		jr	c,initCuchillo5
 		
 		ld	a,b		; (!?) No hace falta ponerlo! A ya es igual a B
-		sub	#21		; Peldaño de escalera que sube a la izquierda
-		cp	2		; Comprueba los dos tipos de peldaño (derecha e izquierda)
+		sub	#21		; Peldaï¿½o de escalera que sube a la izquierda
+		cp	2		; Comprueba los dos tipos de peldaï¿½o (derecha e izquierda)
 		jr	nc,initCuchillo4
 		
 		ld	a,b
 	ELSE
-		cp	31h		; Cuchillo sobre peldaño?
+		cp	31h		; Cuchillo sobre peldaï¿½o?
 		jr	z, initCuchillo6
 
-		cp	21h		; Peldaño escalera que sube a la izquierda
+		cp	21h		; Peldaï¿½o escalera que sube a la izquierda
 		jr	z, initCuchillo3
 
-		cp	22h		; Peldaño escalera que sube a la derecha
+		cp	22h		; Peldaï¿½o escalera que sube a la derecha
 		jr	nz, initCuchillo4
 	ENDIF
 initCuchillo3:
-		add	a, 10h		; Convierte el tile de cuchillo	en "cuchillo sobre peldaño"
+		add	a, 10h		; Convierte el tile de cuchillo	en "cuchillo sobre peldaï¿½o"
 		jr	initCuchillo5
 
 initCuchillo4:
@@ -4455,7 +4474,7 @@ knifeEnd:
 		call	getKnifeData
 	
 	IF	(VERSION2)
-		jr	setReboteKnife2	; Apaño para ahorrar un byte
+		jr	setReboteKnife2	; Apaï¿½o para ahorrar un byte
 	ELSE
 		ld	(hl), 0
 		ret
@@ -5096,7 +5115,7 @@ chkTocaProta:
 ; BC incia las coordenadas del area a comprobar
 ; B = X	area
 ; C = Y	area
-; El Tamaño del	area viene indicado por	HL+1 y HL+3
+; El Tamaï¿½o del	area viene indicado por	HL+1 y HL+3
 
 ; HL:
 ; +0 = Offset X1
@@ -5204,7 +5223,12 @@ drawRoom3:
 		ld	a, (de)		; ID tile
 		call	getTileFromID
 		exx
-		out	(c), a
+		IF MSM=0
+			out	(c), a
+		ELSE
+			RST 28h ; MSM
+			DB 0ffh
+		ENDIF
 		exx
 		inc	de
 		djnz	drawRoom3
@@ -5280,9 +5304,9 @@ tilesPlataforma:db    0
 
 
 tilesEscalera:	db 75h
-		db 76h			; Peldaños bajan derecha
+		db 76h			; Peldaï¿½os bajan derecha
 		db 85h
-		db 84h			; Peldaños bajan izquierda
+		db 84h			; Peldaï¿½os bajan izquierda
 
 
 tilesCuchillo:	db 4Bh
@@ -5774,7 +5798,7 @@ DEtoVRAM_NXNY:
 
 
 putBrillosMap:
-		ld	bc, -60h	; Tamaño de una	fila del mapa (3 pantallas de 32 tiles)
+		ld	bc, -60h	; Tamaï¿½o de una	fila del mapa (3 pantallas de 32 tiles)
 		add	hl, bc		; Fila superior
 		ex	de, hl
 		ldi			; Pone brillo superior de la gema
@@ -6666,7 +6690,7 @@ spiningDoors2:
 		bit	0, (hl)		; Esta girando esta puerta?
 		jr	nz, spiningDoors3 ; Si
 
-		ld	de, 7		; Tamaño de la estructura de cada puerta giratoria
+		ld	de, 7		; Tamaï¿½o de la estructura de cada puerta giratoria
 		add	hl, de		; Puntero a la siguiente puerta
 		djnz	spiningDoors2
 		ret
@@ -6735,7 +6759,7 @@ putGiratMap:
 		ld	a, (de)		; Los bits 2-1 indican la altura extra
 		rra
 		and	3
-		add	a, 2		; Le añade la altura minima de la puerta (2)
+		add	a, 2		; Le aï¿½ade la altura minima de la puerta (2)
 		ld	b, a		; Altura de la puerta
 		ld	a, 5
 		call	ADD_A_DE
@@ -6865,7 +6889,7 @@ quitaGiratorias:
 
 quitaGiratoria2:
 		push	hl
-		ld	a, (hl)		; Tamaño de la puerta giratoria
+		ld	a, (hl)		; Tamaï¿½o de la puerta giratoria
 		rra
 		and	3
 		add	a, 2
@@ -7073,7 +7097,7 @@ getNextDoor:
 		dec	a
 		ld	(de), a		; Marca	salida como no disponible
 		inc	hl
-		ld	a, 7		; Tamaño de la estructura de cada salida
+		ld	a, 7		; Tamaï¿½o de la estructura de cada salida
 		call	ADD_A_DE	; DE apunta al buffer de la siguiente salida
 		jr	chkLastDoor	; Comprueba si ya se han procesado todas las puertas
 
@@ -7430,7 +7454,7 @@ getStairs4:
 
 getStairs5:
 		ld	c, 15h
-		call	putPeldanoMap	; Pone peldaño especial	de inicio/fin escalera
+		call	putPeldanoMap	; Pone peldaï¿½o especial	de inicio/fin escalera
 		pop	de
 		inc	de
 		pop	bc
@@ -7442,7 +7466,7 @@ putPeldanoMap:
 		and	a
 		jr	z, putPeldanoMap2
 		inc	c
-		inc	c		; Peldaños hacia la izquierda
+		inc	c		; Peldaï¿½os hacia la izquierda
 
 putPeldanoMap2:
 		ld	(hl), c
@@ -8354,7 +8378,7 @@ framesMomia:	db 2Ch			; Pie atras
 		db 28h			; Pies juntos
 		db 30h			; Pies eparados
 		db 0E8h			; Nube grande
-		db 0ECh			; Nube pequeña
+		db 0ECh			; Nube pequeï¿½a
 		db 0D4h			; Destello
 
 ;----------------------------------------------------
@@ -8595,7 +8619,7 @@ momiaAparece:
 		ld	a, 8		; Frame	nube grande
 		jr	z, setMomiaFrame
 
-		inc	a		; Frame	nube pequeña
+		inc	a		; Frame	nube pequeï¿½a
 
 setMomiaFrame:
 		ld	(ix+ACTOR_FRAME), a
@@ -9081,7 +9105,7 @@ guardaOrden:
 		ex	af, af'
 		push	af
 		and	0FCh		; Mantiene el sentido de la busqueda
-		or	c		; Añade	orden de subir o bajar
+		or	c		; Aï¿½ade	orden de subir o bajar
 		ld	(de), a		; Guarda la orden
 		pop	af
 		ex	af, af'
@@ -9270,7 +9294,7 @@ chkTocaY_8:
 
 chkChocaSalto:
 		inc	hl
-		ld	a, (sentidoEscalera) ; Valor de	los controles en el momento del	salto. Así se sabe si fue un salto vertical
+		ld	a, (sentidoEscalera) ; Valor de	los controles en el momento del	salto. Asï¿½ se sabe si fue un salto vertical
 		cp	10h		; Boton	A apretado? (Hold jump)
 chkChocaSalto1:
 		inc	hl
@@ -9732,7 +9756,7 @@ setupEnding:
 		ld	c, 92h
 		call	drawHalfPiram
 
-		ld	hl, 3A2Bh	; VRAM address name table = Posicion vert. izq.	piramide pequeña central
+		ld	hl, 3A2Bh	; VRAM address name table = Posicion vert. izq.	piramide pequeï¿½a central
 		call	drawHalfPiram
 
 		ld	hl, 3A04h	; VRAM address name table = Posicion vertice superior lado derecho piramide mediana izquierda
@@ -9740,7 +9764,7 @@ setupEnding:
 		inc	a		; Lado derecho de las piramides
 		call	drawHalfPiram
 
-		ld	hl, 3A2Ch	; VRAM address name table = Posicion vertice superior lado derecho piramide pequeña central
+		ld	hl, 3A2Ch	; VRAM address name table = Posicion vertice superior lado derecho piramide pequeï¿½a central
 		call	drawHalfPiram
 
 		ld	de, tilesEndDoor ; Patrones que	forman la puerta de la piramide	grande
@@ -10888,9 +10912,9 @@ MUS_SalirPiram2:db 0D4h, 0FCh, 3, 3, 0E1h, 40h,	0E0h, 0, 40h, 0, 40h, 0FFh
 ; Identificador del juego de Konami: OUKE NO TANI
 ;
 ;    -00: #AA (Token)
-;    -01: Número RC7xx en formato BCD
-;    -02: Número de bytes usados para el nombre
-;    -03: Nombre en katakana (escrito al revés)
+;    -01: Nï¿½mero RC7xx en formato BCD
+;    -02: Nï¿½mero de bytes usados para el nombre
+;    -03: Nombre en katakana (escrito al revï¿½s)
 ;
 ;------------------------------------------------------------------------------
 		db 95h,	8Fh, 98h, 88h, 82h, 84h, 6, 27h, 0AAh
@@ -11134,7 +11158,7 @@ numKnifes:	# 1
 ;
 ; Datos	de los cuchillos
 ; Numero maximo	de cuchillos 6
-; Tamaño de la estructura 17 bytes
+; Tamaï¿½o de la estructura 17 bytes
 ;
 knifesData:	# 66h			; 0 = Status (1	= suelo, 2 = Cogido, 4 = Lanzamiento?, 5= lanzado, 7 =Rebotando)
 					; 1 = Sentido (1 = izquierda, 2	= Derecha)
@@ -11178,3 +11202,4 @@ stackTop:	# 0
 MapaRAMRoot:	# 60h			; La primera fila del mapa no se usa (ocupada por el marcador).	Tambien	usado como inicio de la	pila
 MapaRAM:	# 8A0h			; Mapa de las tres posibles habitaciones de la piramide. Cada fila ocupa #60 bytes (#20 * 3)
 
+ENDADR:
