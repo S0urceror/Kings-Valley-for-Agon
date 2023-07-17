@@ -199,11 +199,13 @@ tickMain2:
 ;----------------------------------------------------
 
 ReadKeys_AC:
+	IF MSM=0
 		ld	hl, KonamiLogo2
 		ld	a, (JumpIndex2)
 		ld	(hl), a
 		inc	hl
 		ld	(hl), 0C9h	; RET opcode
+	ENDIF
 		jp	ReadKeys
 
 ;----------------------------------------------------
